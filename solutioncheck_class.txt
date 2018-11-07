@@ -1,0 +1,58 @@
+import java.io.File;
+import java.io.PrintStream;
+
+public class SolutionCheck
+{
+  private static String instanceFileName;
+  private static String solutionFileName;
+  private static String constantsFileName;
+  private static String resultFileName;
+  
+  public SolutionCheck()
+  {
+    System.out.println("\nChecking file existency ...");
+    if (!checkFileExistence(instanceFileName)) {
+      System.exit(1);
+    }
+    if (!checkFileExistence(solutionFileName)) {
+      System.exit(1);
+    }
+    if (!checkFileExistence(constantsFileName)) {
+      System.exit(1);
+    }
+    System.out.println("All files exist!");
+    
+    InstanceProblem localInstanceProblem = new InstanceProblem(instanceFileName);
+    System.out.println(localInstanceProblem.toString());
+    
+    Constants localConstants = new Constants(constantsFileName);
+    System.out.println(localConstants.toString());
+    
+    Solution localSolution = new Solution(solutionFileName, resultFileName);
+  }
+  
+  public static void main(String[] paramArrayOfString)
+  {
+    System.out.println("\n----------------------------------------------------------------------");
+    System.out.println("--        Challenge ROADEF 2003 -  Solution  Checking Program       --");
+    System.out.println("----------------------------------------------------------------------");
+    
+    instanceFileName = paramArrayOfString[0];
+    solutionFileName = paramArrayOfString[1];
+    constantsFileName = paramArrayOfString[2];
+    resultFileName = paramArrayOfString[3];
+    
+    SolutionCheck localSolutionCheck = new SolutionCheck();
+  }
+  
+  public static boolean checkFileExistence(String paramString)
+  {
+    File localFile = new File(paramString);
+    if (localFile.exists()) {
+      return true;
+    }
+    System.out.println("*** Error : file " + paramString + " does not exist. Exiting program...");
+    return false;
+  }
+}
+

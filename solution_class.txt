@@ -1,0 +1,280 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.StringTokenizer;
+
+public class Solution
+{
+  protected int dataSet;
+  protected int grid;
+  protected int track;
+  protected int Na;
+  private boolean isFeasible;
+  private List solutionList;
+  private double gain;
+  private String resultFileName;
+  
+  public Solution(String paramString1, String paramString2)
+  {
+    this.resultFileName = paramString2;
+    this.solutionList = constructSolutionList(paramString1);
+    this.isFeasible = verifySolution();
+    if (this.isFeasible) {
+      this.gain = computeGain();
+    }
+    displaySolution();
+    writeResultsFile(paramString2);
+  }
+  
+  public List constructSolutionList(String paramString)
+  {
+    ArrayList localArrayList = new ArrayList();
+    
+    File localFile = new File(paramString);
+    try
+    {
+      System.out.println("\nReading solution file " + paramString + " ...");
+      
+      BufferedReader localBufferedReader = new BufferedReader(new FileReader(localFile));
+      
+      String str = localBufferedReader.readLine();
+      StringTokenizer localStringTokenizer = new StringTokenizer(str, " ");
+      this.dataSet = Integer.valueOf(localStringTokenizer.nextToken()).intValue();
+      this.grid = Integer.valueOf(localStringTokenizer.nextToken()).intValue();
+      this.track = Integer.valueOf(localStringTokenizer.nextToken()).intValue();
+      
+      str = localBufferedReader.readLine();
+      localStringTokenizer = new StringTokenizer(str, " ");
+      
+      this.Na = Integer.valueOf(localStringTokenizer.nextToken()).intValue();
+      for (int i = 0; i < this.Na; i++)
+      {
+        Image localImage = readImage(localBufferedReader, paramString);
+        localArrayList.add(localImage);
+      }
+    }
+    catch (Exception localException)
+    {
+      System.out.println("*** Error when reading the solution file : " + paramString);
+      
+      localException.printStackTrace();
+      System.exit(1);
+    }
+    return localArrayList;
+  }
+  
+  private Image readImage(BufferedReader paramBufferedReader, String paramString)
+  {
+    Image localImage = null;
+    try
+    {
+      String str = paramBufferedReader.readLine();
+      StringTokenizer localStringTokenizer = new StringTokenizer(str, " ");
+      
+      Integer localInteger = Integer.valueOf(localStringTokenizer.nextToken());
+      
+      int i = Integer.valueOf(localStringTokenizer.nextToken()).intValue();
+      
+      Strip localStrip = (Strip)InstanceProblem.mStrip.get(localInteger);
+      localImage = localStrip.cImage[i];
+    }
+    catch (Exception localException)
+    {
+      System.out.println("*** Error when reading selected strip acquisitions in the solution file : " + paramString);
+      
+      localException.printStackTrace();
+      System.exit(1);
+    }
+    return localImage;
+  }
+  
+  private boolean verifySolution()
+  {
+    Iterator localIterator = this.solutionList.iterator();
+    if (this.solutionList == null)
+    {
+      System.out.println("*** Error in verifySolution : the list of selected strip acquisitions is empty");
+      
+      System.exit(1);
+    }
+    while (localIterator.hasNext())
+    {
+      Image localImage1 = (Image)localIterator.next();
+      if (localImage1.Tmink > localImage1.Tmaxk)
+      {
+        System.out.println("*** Error in verifySolution : empty visibility window for  acquisition of strip :" + localImage1.Strak.j);
+        
+        return false;
+      }
+      Image localImage2 = localImage1.Strak.cImage[((localImage1.Dirak + 1) % 2)];
+      if (this.solutionList.contains(localImage2))
+      {
+        System.out.println("*** Error in verifySolution : strip " + localImage1.Strak.j + " acquired twice");
+        
+        return false;
+      }
+      if (localImage1.Strak.Twj != 0)
+      {
+        Strip localStrip = (Strip)InstanceProblem.mStrip.get(new Integer(localImage1.Strak.Twj));
+        Image localImage3 = localStrip.cImage[localImage1.Dirak];
+        if (!this.solutionList.contains(localImage3))
+        {
+          System.out.println("*** Error in verifySolution : stereo acquisition constraint  violation for strip :" + localImage1.Strak.j);
+          
+          return false;
+        }
+      }
+    }
+    if (this.solutionList.size() > 1)
+    {
+      localIterator = this.solutionList.iterator();
+      
+      Image localImage4 = (Image)localIterator.next();
+      
+      double d1 = localImage4.Tmink;
+      while (localIterator.hasNext())
+      {
+        Image localImage5 = localImage4;
+        localImage4 = (Image)localIterator.next();
+        
+        double d2 = localImage5.Strak.DUj;
+        double d3 = transitionTime(localImage5, localImage4);
+        double d4 = d1 + d2 + d3;
+        if (d4 > localImage4.Tmaxk)
+        {
+          System.out.println("*** Error in verifySolution : empty visibility window for  acquisition of strip :" + localImage4.Strak.j + " after propagation of the temporal constraints");
+          
+          return false;
+        }
+        d1 = Math.max(localImage4.Tmink, d4);
+      }
+    }
+    return true;
+  }
+  
+  private double transitionTime(Image paramImage1, Image paramImage2)
+  {
+    double d1 = paramImage1.geoPointOutput.X - paramImage2.geoPointInput.X;
+    
+    double d2 = paramImage1.geoPointOutput.Y - paramImage2.geoPointInput.Y;
+    
+    double d3 = Math.sqrt(d1 * d1 + d2 * d2);
+    
+    double d4 = 2.0D * Math.atan(d3 / (2.0D * Constants.Hs));
+    
+    return Constants.Dmin + d4 / Constants.Vr;
+  }
+  
+  private double computeGain()
+  {
+    this.gain = 0.0D;
+    
+    Iterator localIterator = this.solutionList.iterator();
+    Request localRequest;
+    while (localIterator.hasNext())
+    {
+      Strip localStrip = ((Image)localIterator.next()).Strak;
+      localRequest = localStrip.associatedRequest;
+      if (localRequest.Ti == 0) {
+        localRequest.acquisitionLevel = 1.0D;
+      } else if (localRequest.Ti == 2) {
+        localRequest.acquisitionLevel += localStrip.fr;
+      }
+    }
+    localIterator = InstanceProblem.mRequest.values().iterator();
+    while (localIterator.hasNext())
+    {
+      localRequest = (Request)localIterator.next();
+      this.gain += localRequest.totalGain * fPartialGain(localRequest.acquisitionLevel);
+    }
+    return this.gain;
+  }
+  
+  protected double fPartialGain(double paramDouble)
+  {
+    double d1 = 0.4D;
+    double d2 = 0.7D;
+    double d3 = 0.25D;
+    double d4 = 1.0D;
+    double d5 = 2.0D;
+    return fPieceWiseLinear(d1, d2, d3, d4, d5, paramDouble);
+  }
+  
+  private double fPieceWiseLinear(double paramDouble1, double paramDouble2, double paramDouble3, double paramDouble4, double paramDouble5, double paramDouble6)
+  {
+    double d1 = 1.0E-4D;
+    double d2 = 0.0D;
+    if ((paramDouble6 < 0.0D - d1) || (paramDouble6 > 1.0D + d1))
+    {
+      System.out.println("*** Error in the function fPieceWiseLinear : acquisition level (=" + paramDouble6 + ") must be a number between 0 and 1");
+      
+      System.exit(1);
+    }
+    if ((paramDouble1 * (paramDouble3 - paramDouble4) + paramDouble2 * (paramDouble4 - paramDouble5) + paramDouble5 > 1.0D + d1) || (paramDouble1 * (paramDouble3 - paramDouble4) + paramDouble2 * (paramDouble4 - paramDouble5) + paramDouble5 < 1.0D - d1))
+    {
+      System.out.println("*** Error in the function fPieceWiseLinear :  breakpoints are incompatible");
+      
+      System.exit(1);
+    }
+    if (paramDouble6 <= paramDouble1) {
+      d2 = paramDouble3 * paramDouble6;
+    } else if (paramDouble6 <= paramDouble2) {
+      d2 = paramDouble3 * paramDouble1 + paramDouble4 * (paramDouble6 - paramDouble1);
+    } else if (paramDouble6 > paramDouble2) {
+      d2 = paramDouble3 * paramDouble1 + paramDouble4 * (paramDouble2 - paramDouble1) + paramDouble5 * (paramDouble6 - paramDouble2);
+    }
+    return d2;
+  }
+  
+  private void displaySolution()
+  {
+    StringBuffer localStringBuffer = new StringBuffer();
+    localStringBuffer.append(toString() + "\n");
+    if (this.isFeasible) {
+      localStringBuffer.append("           Feasible; g= " + (int)this.gain);
+    } else {
+      localStringBuffer.append("  not feasible !");
+    }
+    System.out.println(localStringBuffer.toString());
+  }
+  
+  public String toString()
+  {
+    return "Solution : {data set= " + this.dataSet + "; grid = " + this.grid + "; track = " + this.track + "; Na=" + this.Na + "}";
+  }
+  
+  public void writeResultsFile(String paramString)
+  {
+    try
+    {
+      System.out.println("\nWriting solution checking results in file " + paramString + " ...");
+      
+      PrintWriter localPrintWriter = new PrintWriter(new BufferedWriter(new FileWriter(paramString)));
+      
+      localPrintWriter.println(this.dataSet + " " + this.grid + " " + this.track);
+      if (this.isFeasible) {
+        localPrintWriter.println((int)this.gain);
+      } else {
+        localPrintWriter.println(0);
+      }
+      localPrintWriter.close();
+      System.out.println("File " + paramString + " generated");
+    }
+    catch (Exception localException)
+    {
+      System.out.println("*** Error when writing file  : " + paramString);
+      localException.printStackTrace();
+      System.exit(1);
+    }
+  }
+}
+
