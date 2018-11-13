@@ -53,6 +53,13 @@
         "request-surface": 130.293,
         "request-type": 0
     },
+    "shotgain_vector": [
+        5211720.0,
+        5211720.0,
+        5211720.0,
+        5211720.0,
+        0.0
+    ],
     "strip-number": 2,
     "strip_1": {
         "associated-request-index": 2215,

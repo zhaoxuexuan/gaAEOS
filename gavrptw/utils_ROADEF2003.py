@@ -57,7 +57,9 @@ def text2json(customize=False):
         return (((strip1['coordinates_%s' % i1]['x'] - strip2['coordinates_%s' % i2]['x'] )**2 + (strip1['coordinates_%s' % i1]['y'] - strip2['coordinates_%s' % i2]['y'] )**2 )**0.5)
     def shot2strip(k):
         return('strip_%d' % int((k+1)/2))
-        
+    def strip2request(strip):
+        return('request_%d' % int(strip['associated-request-index']))  
+
     def Tmin(k,strip):
         #Tmin(k,jsonData[shot2strip(k) )
         j1=int((k+1)/2)
@@ -71,7 +73,8 @@ def text2json(customize=False):
         i1=(k+1)%2 
         i2=k%2
         return(min(strip['coordinates_%s' % i1]['tl'],strip['coordinates_%s' % i2]['tl']-strip['strip-acquisition-duration']))   
-    
+    def shotgain(k,strip,request):
+        return(strip['strip-useful-surface']*request['request-gain'])
     if customize:
         textDataDir = os.path.join(BASE_DIR, 'data', 'text_customize')
         jsonDataDir = os.path.join(BASE_DIR, 'data', 'json_customize')
@@ -149,7 +152,8 @@ def text2json(customize=False):
         jsonData['distance_matrix'] = [[ distance(k1,k2,jsonData[shot2strip(k1)], jsonData[shot2strip(k2)]) for k1 in shots] for k2 in shots]
         jsonData['Tmin_vector']=[ Tmin(k,jsonData[shot2strip(k)]) for k in shots]
         jsonData['Tmax_vector']=[ Tmax(k,jsonData[shot2strip(k)]) for k in shots]
-        
+        jsonData['shotgain_vector']=[ shotgain(k,jsonData[shot2strip(k)],jsonData[strip2request(jsonData[shot2strip(k)])] )  for k in shots]
+        jsonData['shotgain_vector'].append(0.0)
         for k in shots:
             if jsonData[shot2strip(k)]['twin-strip-index']!= 0:
                 for stripID in fnmatch.filter(jsonData.keys(),'strip_*'):

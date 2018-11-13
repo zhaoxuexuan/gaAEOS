@@ -26,8 +26,8 @@ def main():
         popSize =100,
         cxPb = 0.85,
         mutPb = 0.5,
-        NGen = 100,
-        Mul_Flag = True,
+        NGen = 0,
+        Mul_Flag = False,
         exportCSV=exportCSV
         
     )

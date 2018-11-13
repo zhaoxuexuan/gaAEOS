@@ -29,6 +29,7 @@ def shot2strip(k):
  
 def verifySolution(solution,instance):
     #solution is a list containing a sequence of shotID selected
+    if solution==[]:return(True)
     k=solution[0]
     t_current = instance['Tmin_vector'][k-1]
     for k_next in solution[1:]:
@@ -105,7 +106,7 @@ def ind2solution(individual, instance):
         #**************HERE NEED TO CHECK**************
     indicator =[]
     solution_indicator=[]
-    for k in individual:
+    for k in solution:
         
         if  instance[shot2strip(k)]['twin-strip-index'] != 0 :
             twin_strip = int(instance[shot2strip(k)]['twin-strip-ID'][6:])
@@ -196,7 +197,8 @@ def evalROADEF2003(individual, instance):
     gain=0       
     for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
         gain = gain + instance[requestIndex]['request-gain']*instance[requestIndex]['request-surface']* \
-            (instance[requestIndex]['request-stereo']+1)*Piecewise(fr[requestIndex])
+            (instance[requestIndex]['request-stereo']+1)*fr[requestIndex]
+           # (instance[requestIndex]['request-stereo']+1)*Piecewise(fr[requestIndex])
     #print('Total gain:',gain)
     return(int(gain),)        
         
@@ -443,9 +445,9 @@ def gaROADEF2003(instName,indSize=0,popSize = 100, cxPb=0.5, mutPb=0.05, NGen=10
     toolbox.register('heuristic',Heuristic,instance)
     toolbox.register('individual_heuri',tools.initIterate,creator.Individual,toolbox.heuristic)
     # STRATEGY 1: RS
-#    toolbox.register('population', tools.initRepeat, list, toolbox.individual)
+    toolbox.register('population', tools.initRepeat, list, toolbox.individual)
     # STRATEGY 2: RNDS
-    toolbox.register('population', initRNDS, list, toolbox.individual,toolbox.evaluate)
+#    toolbox.register('population', initRNDS, list, toolbox.individual,toolbox.evaluate)
     # STRATEGY 3: HRHS
 #    toolbox.register('population', tools.initRepeat, list, toolbox.individual_heuri)
     # Operator registering    
