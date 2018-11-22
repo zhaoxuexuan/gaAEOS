@@ -66,14 +66,22 @@ def text2json(customize=False):
         i1=(k+1)%2 
         i2=k%2
         return(max(strip['coordinates_%s' % i1]['te'],strip['coordinates_%s' % i2]['te']-strip['strip-acquisition-duration']))
-    
     def Tmax(k,strip):
         #Tmax(k,jsonData[shot2strip(k) )
         j1=int((k+1)/2)
         i1=(k+1)%2 
         i2=k%2
         return(min(strip['coordinates_%s' % i1]['tl'],strip['coordinates_%s' % i2]['tl']-strip['strip-acquisition-duration']))   
+    def Tmin_0(strip):
+        return(max(strip['coordinates_0' ]['te'],strip['coordinates_1' ]['te']-strip['strip-acquisition-duration']))    
+    def Tmax_0(strip):
+        return(min(strip['coordinates_0' ]['tl'],strip['coordinates_1' ]['tl']-strip['strip-acquisition-duration']))  
+    def distance10(strip1, strip2):
+        return (((strip1['coordinates_1' ]['x'] - strip2['coordinates_0' ]['x'] )**2 + (strip1['coordinates_1' ]['y'] - strip2['coordinates_0' ]['y'] )**2 )**0.5)
+  
     def shotgain(k,strip,request):
+        return(strip['strip-useful-surface']*request['request-gain'])
+    def stripgain(strip,request):
         return(strip['strip-useful-surface']*request['request-gain'])
     if customize:
         textDataDir = os.path.join(BASE_DIR, 'data', 'text_customize')
@@ -146,23 +154,30 @@ def text2json(customize=False):
 
                     pass
 
-
-        shots = [x for x in range(1, 2*j +1)]
-#                    distance(k1,k2,jsonData[shot2strip(k1)], jsonData[shot2strip(k2)])
-        jsonData['distance_matrix'] = [[ distance(k1,k2,jsonData[shot2strip(k1)], jsonData[shot2strip(k2)]) for k1 in shots] for k2 in shots]
-        jsonData['Tmin_vector']=[ Tmin(k,jsonData[shot2strip(k)]) for k in shots]
-        jsonData['Tmax_vector']=[ Tmax(k,jsonData[shot2strip(k)]) for k in shots]
-        jsonData['shotgain_vector']=[ shotgain(k,jsonData[shot2strip(k)],jsonData[strip2request(jsonData[shot2strip(k)])] )  for k in shots]
-        jsonData['shotgain_vector'].append(0.0)
-        for k in shots:
-            if jsonData[shot2strip(k)]['twin-strip-index']!= 0:
-                for stripID in fnmatch.filter(jsonData.keys(),'strip_*'):
-                    if jsonData[stripID]['strip-index'] == jsonData[shot2strip(k)]['twin-strip-index']:
-                        jsonData[shot2strip(k)]['twin-strip-ID'] = stripID
-            else:
-                jsonData[shot2strip(k)]['twin-strip-ID'] = ''
-                
-        jsonFilename = '%s.json' % jsonData['instance_name']
+        if customize:
+            strips = [x for x in range(1,j+1)]
+            jsonData['distance10_matrix']=[[ distance10(jsonData['strip_%s' % k1], jsonData['strip_%s' % k2]) for k1 in strips] for k2 in strips]
+            jsonData['Tmin0_vector']=[Tmin_0(jsonData['strip_%s' % k]) for k in strips]
+            jsonData['Tmax0_vector']=[Tmax_0(jsonData['strip_%s' % k]) for k in strips]
+            jsonData['stripgain_vector']=[stripgain(jsonData['strip_%s' % k],jsonData[strip2request(jsonData['strip_%s' %k])]) for k in strips]
+            jsonData['stripgain_vector'].append(0.0)
+            jsonFilename = 'instance_%s.json' % j
+        else:
+            shots = [x for x in range(1, 2*j +1)]
+            jsonData['distance_matrix'] = [[ distance(k1,k2,jsonData[shot2strip(k1)], jsonData[shot2strip(k2)]) for k1 in shots] for k2 in shots]
+            jsonData['Tmin_vector']=[ Tmin(k,jsonData[shot2strip(k)]) for k in shots]
+            jsonData['Tmax_vector']=[ Tmax(k,jsonData[shot2strip(k)]) for k in shots]
+            jsonData['shotgain_vector']=[ shotgain(k,jsonData[shot2strip(k)],jsonData[strip2request(jsonData[shot2strip(k)])] )  for k in shots]
+            jsonData['shotgain_vector'].append(0.0)
+            for k in shots:
+                if jsonData[shot2strip(k)]['twin-strip-index']!= 0:
+                    for stripID in fnmatch.filter(jsonData.keys(),'strip_*'):
+                        if jsonData[stripID]['strip-index'] == jsonData[shot2strip(k)]['twin-strip-index']:
+                            jsonData[shot2strip(k)]['twin-strip-ID'] = stripID
+                else:
+                    jsonData[shot2strip(k)]['twin-strip-ID'] = ''
+                    
+            jsonFilename = '%s.json' % jsonData['instance_name']
         jsonPathname = os.path.join(jsonDataDir, jsonFilename)
         print('Write to file: %s' % jsonPathname)
         makeDirsForFile(pathname=jsonPathname)
