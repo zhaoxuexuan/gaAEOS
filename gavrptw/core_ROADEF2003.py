@@ -72,103 +72,141 @@ def verifySolution(solution,instance):
             print('***Error in verifySolution: empty visibility window')
             print(solution,k)
     return(True)
-    
-    
-def ind2solution(individual, instance):
+
+def ind2solution(individual,instance, simple_flag = False, strip_flag = False,time_flag =False):
     # individual is a list containing a sequence of shotID selected
     # solution is a valid list, cut from individual
-    solution =[]
-    
-    k=individual[0]
-    solution=[k]
-    t_current = instance['Tmin_vector'][k-1]
-    for k_next in individual[1:]:
-        # cut individual : 1 shot for 1strip
-        if k_next % 2 ==1:
-            k_pair = k_next +1
-        else:
-            k_pair = k_next-1
-        if k_pair in solution:
-            break
-        # cut individual : empty visibility window
-        if instance['Tmin_vector'][k_next-1]> instance['Tmax_vector'][k_next-1]:
-            break
-        # cut individual : time 
-        transitionTime = transTime(instance['distance_matrix'][k_next-1][k-1])
-        durationTime = instance[shot2strip(k)]['strip-acquisition-duration']
-        if t_current+transitionTime+durationTime <= instance['Tmax_vector'][k_next-1]:
-            solution.append(k_next)
-            t_current =max(instance['Tmin_vector'][k_next-1],t_current+transitionTime+durationTime)
-            k = k_next
-        else:
-            break
-    # cut individual : stereo violation
-        #**************HERE NEED TO CHECK**************
-    indicator =[]
-    solution_indicator=[]
-    for k in solution:
-        
-        if  instance[shot2strip(k)]['twin-strip-index'] != 0 :
-            twin_strip = int(instance[shot2strip(k)]['twin-strip-ID'][6:])
-            if k%2 == 0:
-                k_twin = 2*twin_strip
+    if strip_flag:
+        strips = individual
+        solution =[] 
+        time =[]
+        k=strips[0]
+        solution=[k]
+        t_current = instance['Tmin0_vector'][k-1]
+        time.append(t_current)
+        for k_next in strips[1:]:
+            # cut individual : empty visibility window
+            if instance['Tmin0_vector'][k_next-1]> instance['Tmax0_vector'][k_next-1]:
+                break
+            # cut individual : time 
+            transitionTime = transTime(instance['distance10_matrix'][k_next-1][k-1])
+            durationTime = instance['strip_%s' % k]['strip-acquisition-duration']
+            if t_current+transitionTime+durationTime <= instance['Tmax0_vector'][k_next-1]:
+                solution.append(k_next)
+                t_current =max(instance['Tmin0_vector'][k_next-1],t_current+transitionTime+durationTime)
+                k = k_next
+                time.append(t_current)
             else:
-                k_twin = 2*twin_strip -1
-            if k_twin not in indicator:
-                indicator.append(k)
+                break
+
+    elif simple_flag:
+        solution =[]        
+        k=individual[0]
+        solution=[k]
+        t_current = instance['Tmin_vector'][k-1]
+        for k_next in individual[1:]:
+            # cut individual : empty visibility window
+            if instance['Tmin_vector'][k_next-1]> instance['Tmax_vector'][k_next-1]:
+                break
+            # cut individual : time 
+            transitionTime = transTime(instance['distance_matrix'][k_next-1][k-1])
+            durationTime = instance[shot2strip(k)]['strip-acquisition-duration']
+            if t_current+transitionTime+durationTime <= instance['Tmax_vector'][k_next-1]:
+                solution.append(k_next)
+                t_current =max(instance['Tmin_vector'][k_next-1],t_current+transitionTime+durationTime)
+                k = k_next
             else:
-                indicator.remove(k_twin)
-        if indicator == []:
-            solution_indicator.append(1)
-        else:
-            solution_indicator.append(0)
-    
-    if 1 not in solution_indicator:
-        solution =[]
-        return solution
+                break
     else:
-        #print(solution_indicator)
-        solution_indicator.reverse()
-        solution = solution[:len(solution_indicator[solution_indicator.index(1):])]
-    
-      
-#    print('ind2solution:',solution)  
-    return solution
-
-def evalMulROADEF2003(individual, instance):
-    def Piecewise(x):
-        if x<0.4:
-            return(x/4.0)
-        elif x<0.7:
-            return(x-0.3)
-        else:
-            return(2*x-1)
-    solution = ind2solution(individual,instance)        
-    fr={}
-    for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
-        fr[requestIndex] = 0
+        solution =[]        
+        k=individual[0]
+        solution=[k]
+        t_current = instance['Tmin_vector'][k-1]
+        for k_next in individual[1:]:
+            # cut individual : 1 shot for 1strip
+            if k_next % 2 ==1:
+                k_pair = k_next +1
+            else:
+                k_pair = k_next-1
+            if k_pair in solution:
+                break
+            # cut individual : empty visibility window
+            if instance['Tmin_vector'][k_next-1]> instance['Tmax_vector'][k_next-1]:
+                break
+            # cut individual : time 
+            transitionTime = transTime(instance['distance_matrix'][k_next-1][k-1])
+            durationTime = instance[shot2strip(k)]['strip-acquisition-duration']
+            if t_current+transitionTime+durationTime <= instance['Tmax_vector'][k_next-1]:
+                solution.append(k_next)
+                t_current =max(instance['Tmin_vector'][k_next-1],t_current+transitionTime+durationTime)
+                k = k_next
+            else:
+                break
+        # cut individual : stereo violation
+            #**************HERE NEED TO CHECK**************
+        indicator =[]
+        solution_indicator=[]
+        for k in solution:
+            
+            if  instance[shot2strip(k)]['twin-strip-index'] != 0 :
+                twin_strip = int(instance[shot2strip(k)]['twin-strip-ID'][6:])
+                if k%2 == 0:
+                    k_twin = 2*twin_strip
+                else:
+                    k_twin = 2*twin_strip -1
+                if k_twin not in indicator:
+                    indicator.append(k)
+                else:
+                    indicator.remove(k_twin)
+            if indicator == []:
+                solution_indicator.append(1)
+            else:
+                solution_indicator.append(0)
         
-    for k in solution:
-        ri = instance[shot2strip(k)]['associated-request-index']
-        fr['request_%d' % ri] = fr['request_%d' % ri] + instance[shot2strip(k)]['strip-useful-surface']/ \
-            (instance['request_%d' % ri]['request-surface']*(instance['request_%d' % ri]['request-stereo']+1))
+        if 1 not in solution_indicator:
+            solution =[]
+        else:
+            #print(solution_indicator)
+            solution_indicator.reverse()
+            solution = solution[:len(solution_indicator[solution_indicator.index(1):])]
+    if time_flag:
+        return solution, time
+    else:
+        return solution   
 
-    gain=0       
-    for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
-        gain = gain + instance[requestIndex]['request-gain']*instance[requestIndex]['request-surface']* \
-            (instance[requestIndex]['request-stereo']+1)*Piecewise(fr[requestIndex])
-    #print('Total gain:',gain)
+
+def evalMulROADEF2003(individual, instance, simple_flag = False, strip_flag = False):
+
+    solution = ind2solution(individual,instance, simple_flag = simple_flag, strip_flag = strip_flag)
+    (gain,) = evalROADEF2003(individual, instance, simple_flag = simple_flag, strip_flag = strip_flag)
+
     time_off_set =[]
-    t_current = instance['Tmin_vector'][k-1]
-    best_time = (instance['Tmin_vector'][0]+instance['Tmax_vector'][0])/2.0
-    time_off_set.append(t_current-best_time)
-    for k_next in solution[1:]:
-        transitionTime =transTime(instance['distance_matrix'][k_next-1][k-1])
-        durationTime = instance[shot2strip(k)]['strip-acquisition-duration']
-        k = k_next
-        t_current =max(instance['Tmin_vector'][k-1],t_current+transitionTime+durationTime)
-        best_time = (instance['Tmin_vector'][k-1]+instance['Tmax_vector'][k-1])/2.0
-        time_off_set.append(t_current-best_time)
+    if strip_flag:
+        if solution != []:
+            k = solution[0]
+            t_current = instance['Tmin0_vector'][k-1]
+            best_time = (instance['Tmin0_vector'][k-1]+instance['Tmax0_vector'][k-1])/2.0
+            time_off_set.append(t_current-best_time)
+        for k_next in solution[1:]:
+            transitionTime =transTime(instance['distance10_matrix'][k_next-1][k-1])
+            durationTime = instance['strip_%s' % k]['strip-acquisition-duration']
+            k = k_next
+            t_current =max(instance['Tmin0_vector'][k-1],t_current+transitionTime+durationTime)
+            best_time = (instance['Tmin0_vector'][k-1]+instance['Tmax0_vector'][k-1])/2.0
+            time_off_set.append(t_current-best_time)  
+    else:
+        if solution != []:
+            k = solution[0]
+            t_current = instance['Tmin_vector'][k-1]
+            best_time = (instance['Tmin_vector'][k-1]+instance['Tmax_vector'][k-1])/2.0
+            time_off_set.append(t_current-best_time)
+        for k_next in solution[1:]:
+            transitionTime =transTime(instance['distance_matrix'][k_next-1][k-1])
+            durationTime = instance[shot2strip(k)]['strip-acquisition-duration']
+            k = k_next
+            t_current =max(instance['Tmin_vector'][k-1],t_current+transitionTime+durationTime)
+            best_time = (instance['Tmin_vector'][k-1]+instance['Tmax_vector'][k-1])/2.0
+            time_off_set.append(t_current-best_time)
 
     sum_time = sum([abs(x) for x in time_off_set])
     
@@ -176,7 +214,7 @@ def evalMulROADEF2003(individual, instance):
 
 
 
-def evalROADEF2003(individual, instance):
+def evalROADEF2003(individual, instance, simple_flag = False, strip_flag = False):
     def Piecewise(x):
         if x<0.4:
             return(x/4.0)
@@ -184,22 +222,31 @@ def evalROADEF2003(individual, instance):
             return(x-0.3)
         else:
             return(2*x-1)
-    solution = ind2solution(individual,instance)        
-    fr={}
-    for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
-        fr[requestIndex] = 0
-        
-    for k in solution:
-        ri = instance[shot2strip(k)]['associated-request-index']
-        fr['request_%d' % ri] = fr['request_%d' % ri] + instance[shot2strip(k)]['strip-useful-surface']/ \
-            (instance['request_%d' % ri]['request-surface']*(instance['request_%d' % ri]['request-stereo']+1))
+    solution = ind2solution(individual,instance, simple_flag = simple_flag, strip_flag = strip_flag)  
+    gain=0     
+    if strip_flag:
+        for strip in solution:
+            gain += instance['stripgain_vector'][strip-1]
+    elif simple_flag:
+        for shot in solution:
+            gain += instance['shotgain_vector'][shot-1]            
+    else:
+        fr={}
+        for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
+            fr[requestIndex] = 0
+            
+        for k in solution:
+            ri = instance[shot2strip(k)]['associated-request-index']
+            fr['request_%d' % ri] = fr['request_%d' % ri] + instance[shot2strip(k)]['strip-useful-surface']/ \
+                (instance['request_%d' % ri]['request-surface']*(instance['request_%d' % ri]['request-stereo']+1))
+    
+          
+        for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
+            gain = gain + instance[requestIndex]['request-gain']*instance[requestIndex]['request-surface']* \
+                (instance[requestIndex]['request-stereo']+1)*Piecewise(fr[requestIndex])
+                #(instance[requestIndex]['request-stereo']+1)*fr[requestIndex]
+            
 
-    gain=0       
-    for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
-        gain = gain + instance[requestIndex]['request-gain']*instance[requestIndex]['request-surface']* \
-            (instance[requestIndex]['request-stereo']+1)*fr[requestIndex]
-           # (instance[requestIndex]['request-stereo']+1)*Piecewise(fr[requestIndex])
-    #print('Total gain:',gain)
     return(int(gain),)        
         
     
@@ -334,19 +381,22 @@ def initRNDS(container, func1,func2, n):
             returntemp.append(tempfunc1)
     return returntemp
 
-def Heuristic(instance):
+def Heuristic(instance, simple_flag =False, strip_flag = False):
     # To replace toobox.indexes
     # generate one individual
-    size = instance['strip-number']*2
+    if strip_flag:
+        size = instance['strip-number']
+    else:
+        size = instance['strip-number']*2
     fr =list()
     for k in range(1,1+size):
-        ri = instance[shot2strip(k)]['associated-request-index']
-        coordi_start = (k+1)%2
-        coordi_end = k%2
-        strip =instance[shot2strip(k)]
+        strip = instance['strip_%s' % k] if strip_flag else instance[shot2strip(k)] 
+        ri = strip['associated-request-index'] 
+        coordi_start = 0 if strip_flag else (k+1)%2
+        coordi_end = 0 if strip_flag else k%2
         fr.append({'shot': k,
             'earliest-start-time':strip['coordinates_%s' % coordi_start]['te'],
-            'shot-gain' :instance['request_%d' % ri]['request-gain']*instance[shot2strip(k)]['strip-useful-surface'],
+            'shot-gain' :instance['request_%d' % ri]['request-gain']*strip['strip-useful-surface'],
             'unit-gain':instance['request_%d' % ri]['request-gain'],            
             'duration': strip['strip-acquisition-duration'],
             'VT': strip['coordinates_%s' % coordi_end]['tl']-strip['coordinates_%s' % coordi_start]['te'],
@@ -356,22 +406,22 @@ def Heuristic(instance):
     inds = list()
     fr.sort(key=lambda x:x['earliest-start-time'],reverse=False) #ascending
     inds.append({'name': 'ind1', 'individual':[x['shot'] for x in fr],
-                 'gain': evalROADEF2003([x['shot'] for x in fr],instance)[0]})
+                 'gain': evalROADEF2003([x['shot'] for x in fr],instance, simple_flag = simple_flag, strip_flag = strip_flag)[0]})
     fr.sort(key=lambda x:x['shot-gain'],reverse=True) #descending
     inds.append({'name': 'ind2', 'individual':[x['shot'] for x in fr],
-                 'gain': evalROADEF2003([x['shot'] for x in fr],instance)[0]})
+                 'gain': evalROADEF2003([x['shot'] for x in fr],instance,simple_flag = simple_flag, strip_flag = strip_flag)[0]})
     fr.sort(key=lambda x:x['unit-gain'],reverse=True) 
     inds.append({'name': 'ind3', 'individual':[x['shot'] for x in fr],
-                 'gain': evalROADEF2003([x['shot'] for x in fr],instance)[0]})
+                 'gain': evalROADEF2003([x['shot'] for x in fr],instance,simple_flag = simple_flag, strip_flag = strip_flag)[0]})
     fr.sort(key=lambda x:x['duration'],reverse=False) 
     inds.append({'name': 'ind4', 'individual':[x['shot'] for x in fr],
-                 'gain': evalROADEF2003([x['shot'] for x in fr],instance)[0]})
+                 'gain': evalROADEF2003([x['shot'] for x in fr],instance,simple_flag = simple_flag, strip_flag = strip_flag)[0]})
     fr.sort(key=lambda x:x['VT'],reverse=False) 
     inds.append({'name': 'ind5', 'individual':[x['shot'] for x in fr],
-                 'gain': evalROADEF2003([x['shot'] for x in fr],instance)[0]})
+                 'gain': evalROADEF2003([x['shot'] for x in fr],instance,simple_flag = simple_flag, strip_flag = strip_flag)[0]})
     fr.sort(key=lambda x:x['blank-VT'],reverse=False) 
     inds.append({'name': 'ind6', 'individual':[x['shot'] for x in fr],
-                 'gain': evalROADEF2003([x['shot'] for x in fr],instance)[0]})
+                 'gain': evalROADEF2003([x['shot'] for x in fr],instance,simple_flag = simple_flag, strip_flag = strip_flag)[0]})
     
 #    print(x['individual'] for x in inds)
     
@@ -382,7 +432,7 @@ def Heuristic(instance):
         u = random.random() * sum_gain
         sum_= 0
         for ind in inds:
-            sum_ += evalROADEF2003(ind['individual'],instance)[0]
+            sum_ += evalROADEF2003(ind['individual'],instance,simple_flag = simple_flag, strip_flag = strip_flag)[0]
             if sum_ > u:
                 for x1 in ind['individual']:
                     if not x1 in individual:
@@ -424,57 +474,79 @@ def selRoulette(individuals, k, fit_attr="fitness"):
     return chosen
 
 
-def gaROADEF2003(instName,indSize=0,popSize = 100, cxPb=0.5, mutPb=0.05, NGen=100,Mul_Flag = False,exportCSV=False):
-    jsonDataDir = os.path.join(BASE_DIR,'data', 'json_ROADEF2003')
-    jsonFile = os.path.join(jsonDataDir, '%s.json' % instName)
-    with open(jsonFile) as f:
-        instance = load(f)
-
+def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mutPb=0.05, NGen=100, \
+                 simple_flag = False, Mul_Flag = False, strip_flag =False,exportCSV=False):
+    '''
+    :param iniMethod: one from ['RS', 'RNDS', 'HRHS', 'FS']
+    :param simple_flag:  True for no stereo constraint and pair constraint
+    :param strip_flag: True for strip instance for customized data
+    :param Mul_Flag: True for NSGA2
+        [Deb2002] Deb, Pratab, Agarwal, and Meyarivan, "A fast elitist
+        non-dominated sorting genetic algorithm for multi-objective
+        optimization: NSGA-II", 2002.
+    '''
     
-    indSize = instance['strip-number']*2
-    
+    if strip_flag:
+        jsonDataDir = os.path.join(BASE_DIR,'data', 'json_customize')
+        jsonFile = os.path.join(jsonDataDir, '%s.json' % instName)
+        with open(jsonFile) as f:
+            instance = load(f)
+        indSize = instance['strip-number']
+    else:
+        jsonDataDir = os.path.join(BASE_DIR,'data', 'json_ROADEF2003')
+        jsonFile = os.path.join(jsonDataDir, '%s.json' % instName)
+        with open(jsonFile) as f:
+            instance = load(f)
+        indSize = instance['strip-number']*2
+        
     creator.create('FitnessMax', base.Fitness, weights=(1.0,-1.0) if Mul_Flag else (1.0,))
     creator.create('Individual', list, fitness=creator.FitnessMax)
     toolbox = base.Toolbox()
     # Attribute generator
     toolbox.register('indexes', random.sample, range(1, indSize + 1), indSize)
     # Evaluate define
-    toolbox.register('evaluate', evalMulROADEF2003 if Mul_Flag else evalROADEF2003, instance=instance)
+    toolbox.register('evaluate', evalMulROADEF2003 if Mul_Flag else evalROADEF2003, \
+                     simple_flag = simple_flag, strip_flag = strip_flag, instance=instance)
     # Structure initializers
     toolbox.register('individual', tools.initIterate, creator.Individual, toolbox.indexes)
-    toolbox.register('heuristic',Heuristic,instance)
+    toolbox.register('heuristic',Heuristic,instance, simple_flag = simple_flag, strip_flag = strip_flag)
     toolbox.register('individual_heuri',tools.initIterate,creator.Individual,toolbox.heuristic)
-    # STRATEGY 1: RS
-    toolbox.register('population', tools.initRepeat, list, toolbox.individual)
-    # STRATEGY 2: RNDS
-#    toolbox.register('population', initRNDS, list, toolbox.individual,toolbox.evaluate)
-    # STRATEGY 3: HRHS
-#    toolbox.register('population', tools.initRepeat, list, toolbox.individual_heuri)
+    if iniMethod =='RS' :
+        # STRATEGY 1: RS
+        toolbox.register('population', tools.initRepeat, list, toolbox.individual)
+        pop = toolbox.population(n=popSize)
+    elif iniMethod == 'RNDS':
+        # STRATEGY 2: RNDS
+        toolbox.register('population', initRNDS, list, toolbox.individual,toolbox.evaluate)
+        pop = toolbox.population(n=popSize)
+    elif iniMethod == 'HRHS':
+        # STRATEGY 3: HRHS
+        toolbox.register('population', tools.initRepeat, list, toolbox.individual_heuri)
+        pop = toolbox.population(n=popSize)
+    elif iniMethod == 'FS':
+        # STRATEGY 4 : FS
+        toolbox.register('population', tools.initRepeat, list, toolbox.individual)           
+        omega = 2
+        pop_big =toolbox.population(n=omega* popSize)
+        fitnesses = list(map(toolbox.evaluate, pop_big))
+        for ind, fit in zip(pop_big, fitnesses):
+            ind.fitness.values = fit    
+        pop = tools.selBest(pop_big, popSize)
+    else:
+        print('Currently unsupported initialization method!')
+        exit(1)
     # Operator registering    
     toolbox.register('select',tools.selNSGA2 if Mul_Flag else tools.selRoulette)
     toolbox.register('mate', cxSameSitCopyFirst)
     toolbox.register('mutate', mutExchangeLocation)
-    pop = toolbox.population(n=popSize)
 
-# =============================================================================
-#     # check if the pop initialized with RNDS 
-#     fitnesses = list(map(toolbox.evaluate, pop))
-#     for fitness in fitnesses:
-#         if fitnesses.count(fitness)>1:
-#             print('***Error for same fitness value')
-# =============================================================================
-    
-# =============================================================================
-#     # STRATEGY 4 : FS
-#     omega = 2
-#     pop_big =toolbox.population(n=omega* popSize)
-#     fitnesses = list(map(toolbox.evaluate, pop_big))
-#     for ind, fit in zip(pop_big, fitnesses):
-#         ind.fitness.values = fit    
-#     pop = tools.selBest(pop_big, popSize)
-#     print(pop)
-# =============================================================================
-    
+
+    if iniMethod == 'RNDS':
+        # check if the pop successfully initialized with RNDS 
+        fitnesses = list(map(toolbox.evaluate, pop))
+        for fitness in fitnesses:
+            if fitnesses.count(fitness)>1:
+                print('***Error for same fitness value')  
     
     # check the validity of pop initialization
     if not checkPopValidity(pop):print('not a valid pop initialization!!!')
@@ -553,40 +625,14 @@ def gaROADEF2003(instName,indSize=0,popSize = 100, cxPb=0.5, mutPb=0.05, NGen=10
     bestInd = tools.selBest(pop, 1)[0]
     print('Best individual: %s' % bestInd)
     print('Fitness: ' , bestInd.fitness.values) 
-    print(ind2solution(bestInd, instance))
+    print(ind2solution(bestInd, instance, simple_flag = simple_flag, strip_flag = strip_flag))
     print('Total cost: %s' % (1 / bestInd.fitness.values[0]))
     print('End of evolution')
 
-    #testSolution = [2,3]
-    solutionFile= os.path.join(BASE_DIR,'Solutions','solution'+instName[8:])
-    #testSolution = [7, 8, 5, 3, 13, 10, 14, 12, 6, 11, 4, 2, 1, 9]
-    testSolution = readsolution2solution(solutionFile,instance)
-    verifySolution(testSolution,instance)  
-    print(toolbox.evaluate(testSolution))
+    if not strip_flag:
+        solutionFile= os.path.join(BASE_DIR,'Solutions','solution'+instName[8:])
+        #testSolution = [4, 6, 8, 2, 10, 12, 14]
+        testSolution = readsolution2solution(solutionFile,instance)
+        verifySolution(testSolution,instance)  
+        print(toolbox.evaluate(testSolution))
 
-
-
-#def cxSameSitCopyFirst(ind1,ind2):
-#    if len(ind1)!= len(ind2):print('***Error in Length of ind1 and ind2 are different')
-#    size = min(len(ind1), len(ind2))
-#    cxpoint1, cxpoint2 = sorted(random.sample(range(size), 2))
-#    index = []
-#    for x1,x2,i in zip(ind1,ind2,range(size)):
-#        if x1==x2 or ((i>=cxpoint1) and (i<=cxpoint2)): 
-#            ind1[i]=x2
-#            ind2[i]=x1
-#            index.append(i)
-#    index_left1 = [x for x in range(size)]
-#    for x in index:
-#        index_left1.remove(x)
-#    index_left2 = index_left1
-#    for i,x1 in enumerate(ind1):
-#        if x1 not in [ind1[x] for x in index]:
-#            ind1[index_left1.pop(0)] = x1
-#    for i,x2 in enumerate(ind2):
-#        if x2 not in [ind2[x] for x in index]:
-#            ind2[index_left2.pop(0)] = x2
-#
-#    if (0 in ind1) or (0 in ind2):print('***Error in crossover')
-#    if (index_left1 != []) or (index_left2 != []):print('***Error in crossover')
-#    return ind1,ind2

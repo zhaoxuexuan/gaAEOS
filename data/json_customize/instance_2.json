@@ -1,0 +1,81 @@
+{
+    "Tmax0_vector": [
+        870.64,
+        879.5600000000001
+    ],
+    "Tmin0_vector": [
+        765.83,
+        771.67
+    ],
+    "data-set-number": 2,
+    "distance10_matrix": [
+        [
+            12880.183733161573,
+            97219.68776950479
+        ],
+        [
+            88502.01636121067,
+            12880.141497669969
+        ]
+    ],
+    "grid-number": 9,
+    "instance_name": "instance_2_9_36",
+    "request-number": 2,
+    "request_2215": {
+        "request-gain": 40000,
+        "request-stereo": 0,
+        "request-surface": 130.293,
+        "request-type": 0
+    },
+    "request_2216": {
+        "request-gain": 40000,
+        "request-stereo": 0,
+        "request-surface": 130.293,
+        "request-type": 0
+    },
+    "strip-number": 2,
+    "strip_1": {
+        "associated-request-index": 2215,
+        "coordinates_0": {
+            "te": 765.83,
+            "tl": 872.71,
+            "x": -4456037,
+            "y": -88775
+        },
+        "coordinates_1": {
+            "te": 767.74,
+            "tl": 874.41,
+            "x": -4443530,
+            "y": -91853
+        },
+        "strip-acquisition-duration": 3.77,
+        "strip-index": 1,
+        "strip-useful-surface": 130.293,
+        "twin-strip-index": 2
+    },
+    "strip_2": {
+        "associated-request-index": 2216,
+        "coordinates_0": {
+            "te": 771.67,
+            "tl": 881.53,
+            "x": -4405252,
+            "y": -12057
+        },
+        "coordinates_1": {
+            "te": 773.5,
+            "tl": 883.33,
+            "x": -4392714,
+            "y": -15006
+        },
+        "strip-acquisition-duration": 3.77,
+        "strip-index": 2,
+        "strip-useful-surface": 130.293,
+        "twin-strip-index": 1
+    },
+    "stripgain_vector": [
+        5211720.0,
+        5211720.0,
+        0.0
+    ],
+    "track-number": 36
+}

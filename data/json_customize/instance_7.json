@@ -1,0 +1,258 @@
+{
+    "Tmax0_vector": [
+        656.74,
+        657.8100000000001,
+        661.98,
+        665.9399999999999,
+        760.6,
+        744.41,
+        843.1700000000001
+    ],
+    "Tmin0_vector": [
+        571.4,
+        571.22,
+        571.56,
+        572.13,
+        656.83,
+        692.18,
+        738.82
+    ],
+    "data-set-number": 2,
+    "distance10_matrix": [
+        [
+            22150.72380307244,
+            49645.87234604706,
+            68299.48301414879,
+            89461.93412284355,
+            735087.4954241841,
+            910221.5794069046,
+            1269538.8180414177
+        ],
+        [
+            28516.38870895121,
+            37747.86665495151,
+            49507.55716049823,
+            67965.08992858024,
+            714759.1433797822,
+            887692.1776122622,
+            1252280.7447573408
+        ],
+        [
+            47781.78809965152,
+            38287.45854715353,
+            36054.14440809822,
+            47755.775106263325,
+            693521.0422950409,
+            864330.7275996845,
+            1233923.216436501
+        ],
+        [
+            70503.09927939338,
+            52195.75756706669,
+            36962.402045862764,
+            34049.501523517196,
+            672513.3707458908,
+            841041.2547247608,
+            1215784.13312438
+        ],
+        [
+            709347.2661010261,
+            677474.673891947,
+            656864.5191894596,
+            636731.493329017,
+            12880.350344614078,
+            236973.85661713826,
+            582302.5231784591
+        ],
+        [
+            889144.2245687704,
+            857619.528742204,
+            834864.0454355427,
+            812366.2131391236,
+            235249.4348813616,
+            12879.720998530986,
+            569308.6904281367
+        ],
+        [
+            1239298.5053331582,
+            1208535.0954941276,
+            1191294.994886657,
+            1174563.861841918,
+            557116.3393520244,
+            544218.3374565763,
+            12880.052329086246
+        ]
+    ],
+    "grid-number": 9,
+    "instance_name": "instance_2_9_66",
+    "request-number": 4,
+    "request_1514": {
+        "request-gain": 40000,
+        "request-stereo": 0,
+        "request-surface": 130.293,
+        "request-type": 0
+    },
+    "request_1540": {
+        "request-gain": 40000,
+        "request-stereo": 0,
+        "request-surface": 130.293,
+        "request-type": 0
+    },
+    "request_1541": {
+        "request-gain": 40000,
+        "request-stereo": 0,
+        "request-surface": 130.293,
+        "request-type": 0
+    },
+    "request_2346": {
+        "request-gain": 50000,
+        "request-stereo": 0,
+        "request-surface": 2001.51,
+        "request-type": 2
+    },
+    "strip-number": 7,
+    "strip_1": {
+        "associated-request-index": 2346,
+        "coordinates_0": {
+            "te": 571.4,
+            "tl": 660.85,
+            "x": -5862187,
+            "y": -221338
+        },
+        "coordinates_1": {
+            "te": 575.14,
+            "tl": 663.22,
+            "x": -5841005,
+            "y": -227817
+        },
+        "strip-acquisition-duration": 6.48,
+        "strip-index": 1,
+        "strip-useful-surface": 151.465,
+        "twin-strip-index": 0
+    },
+    "strip_2": {
+        "associated-request-index": 2346,
+        "coordinates_0": {
+            "te": 571.22,
+            "tl": 664.66,
+            "x": -5849585,
+            "y": -200622
+        },
+        "coordinates_1": {
+            "te": 577.47,
+            "tl": 668.85,
+            "x": -5813491,
+            "y": -211673
+        },
+        "strip-acquisition-duration": 11.04,
+        "strip-index": 2,
+        "strip-useful-surface": 595.632,
+        "twin-strip-index": 0
+    },
+    "strip_3": {
+        "associated-request-index": 2346,
+        "coordinates_0": {
+            "te": 571.56,
+            "tl": 668.39,
+            "x": -5835512,
+            "y": -180352
+        },
+        "coordinates_1": {
+            "te": 577.4,
+            "tl": 672.52,
+            "x": -5801039,
+            "y": -190912
+        },
+        "strip-acquisition-duration": 10.54,
+        "strip-index": 3,
+        "strip-useful-surface": 689.918,
+        "twin-strip-index": 0
+    },
+    "strip_4": {
+        "associated-request-index": 2346,
+        "coordinates_0": {
+            "te": 572.13,
+            "tl": 671.89,
+            "x": -5821433,
+            "y": -160085
+        },
+        "coordinates_1": {
+            "te": 577.53,
+            "tl": 675.9,
+            "x": -5788878,
+            "y": -170062
+        },
+        "strip-acquisition-duration": 9.96,
+        "strip-index": 4,
+        "strip-useful-surface": 564.498,
+        "twin-strip-index": 0
+    },
+    "strip_5": {
+        "associated-request-index": 1540,
+        "coordinates_0": {
+            "te": 656.83,
+            "tl": 762.43,
+            "x": -5215012,
+            "y": 105809
+        },
+        "coordinates_1": {
+            "te": 658.52,
+            "tl": 764.37,
+            "x": -5202467,
+            "y": 102889
+        },
+        "strip-acquisition-duration": 3.77,
+        "strip-index": 5,
+        "strip-useful-surface": 130.293,
+        "twin-strip-index": 0
+    },
+    "strip_6": {
+        "associated-request-index": 1541,
+        "coordinates_0": {
+            "te": 692.18,
+            "tl": 745.73,
+            "x": -5150483,
+            "y": 332323
+        },
+        "coordinates_1": {
+            "te": 693.38,
+            "tl": 748.18,
+            "x": -5137840,
+            "y": 329865
+        },
+        "strip-acquisition-duration": 3.77,
+        "strip-index": 6,
+        "strip-useful-surface": 130.293,
+        "twin-strip-index": 0
+    },
+    "strip_7": {
+        "associated-request-index": 1514,
+        "coordinates_0": {
+            "te": 738.82,
+            "tl": 845.02,
+            "x": -4645370,
+            "y": 98247
+        },
+        "coordinates_1": {
+            "te": 740.53,
+            "tl": 846.94,
+            "x": -4632802,
+            "y": 95429
+        },
+        "strip-acquisition-duration": 3.77,
+        "strip-index": 7,
+        "strip-useful-surface": 130.293,
+        "twin-strip-index": 0
+    },
+    "stripgain_vector": [
+        7573250.0,
+        29781599.999999996,
+        34495900.0,
+        28224900.000000004,
+        5211720.0,
+        5211720.0,
+        5211720.0,
+        0.0
+    ],
+    "track-number": 66
+}

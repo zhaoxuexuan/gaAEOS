@@ -10,7 +10,7 @@ from gavrptw.utils_ROADEF2003 import text2json
 
 
 def main():
-    text2json()
+    text2json(True)
 
 
 if __name__ == '__main__':

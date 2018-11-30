@@ -16,18 +16,21 @@ from gavrptw.core_ROADEF2003 import gaROADEF2003
 def main():
     random.seed(16)
 
-    instName = 'instance_2_9_170'
+    instName = 'instance_25'
 
     exportCSV = False
 
     gaROADEF2003(
         instName=instName,
+        iniMethod= 'RS', #['RS', 'RNDS', 'HRHS', 'FS']
         indSize = 0,
         popSize =100,
         cxPb = 0.85,
         mutPb = 0.5,
-        NGen = 0,
+        NGen = 5,
         Mul_Flag = False,
+        simple_flag = True,
+        strip_flag = True,
         exportCSV=exportCSV
         
     )
