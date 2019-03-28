@@ -26,7 +26,23 @@ def transTime(distance):
 def shot2strip(k):
     return('strip_%d' % int((k+1)/2))
     
- 
+def readsolution2striplist(textFile,instance):
+    '''
+    strip_flag = True
+    '''
+    striplist =[]
+    with open(textFile) as f:
+        for lineNum, line in enumerate(f, start=1):
+                if lineNum >= 3:
+                    values = line.strip().split()
+                    for stripID in fnmatch.filter(instance.keys(),'strip_*'):
+                        if instance[stripID]['strip-index']==int(values[0]):
+                            striplist.append(int(stripID[6:]))
+                        
+    print('read solution file: ',textFile) 
+    print('get solution: \n',striplist)                           
+    return(striplist)
+    
 def verifySolution(solution,instance):
     #solution is a list containing a sequence of shotID selected
     if solution==[]:return(True)
@@ -72,11 +88,50 @@ def verifySolution(solution,instance):
             print('***Error in verifySolution: empty visibility window')
             print(solution,k)
     return(True)
-
-def ind2solution(individual,instance, simple_flag = False, strip_flag = False,time_flag =False):
+            
+def ind2solution(individual,instance, simple_flag = False, strip_flag = False,track_flag=False,time_flag =False):
     # individual is a list containing a sequence of shotID selected
     # solution is a valid list, cut from individual
-    if strip_flag:
+    if track_flag:
+        trackCapacity = 2 #instance['track-number']
+        solution =[]
+        time =[]
+        # Initialize a sub-solution
+        subSolution = []
+        subTime =[]
+        for k in individual:
+            # cut individual : empty visibility window
+            if instance['Tmin0_vector'][k-1]>instance['Tmax0_vector'][k-1]:
+                break
+            # cut individual : transition time
+            if len(subSolution)==0:           
+                subSolution.append(k)
+                t_current = instance['Tmin0_vector'][k-1]
+                subTime.append(t_current)
+                k_last = k
+            else:           
+                transitionTime = transTime(instance['distance10_matrix'][k-1][k_last-1])
+                durationTime = instance['strip_%s' % k_last]['strip-acquisition-duration']
+                if t_current+transitionTime+durationTime <= instance['Tmax0_vector'][k-1]:
+                    subSolution.append(k)
+                    t_current =max(instance['Tmin0_vector'][k-1],t_current+transitionTime+durationTime)
+                    subTime.append(t_current)
+                    k_last = k
+                else:
+                    solution.append(subSolution)
+                    time.append(subTime)
+                    if len(solution)==trackCapacity:
+                        subSolution =[]
+                        subTime =[]
+                        break
+                    subSolution=[k]
+                    t_current = instance['Tmin0_vector'][k-1]
+                    subTime=[t_current]
+                    k_last = k
+        if len(subSolution)!=0:
+            solution.append(subSolution)
+            time.append(subTime)
+    elif strip_flag:
         strips = individual
         solution =[] 
         time =[]
@@ -88,7 +143,7 @@ def ind2solution(individual,instance, simple_flag = False, strip_flag = False,ti
             # cut individual : empty visibility window
             if instance['Tmin0_vector'][k_next-1]> instance['Tmax0_vector'][k_next-1]:
                 break
-            # cut individual : time 
+            # cut individual : transition time 
             transitionTime = transTime(instance['distance10_matrix'][k_next-1][k-1])
             durationTime = instance['strip_%s' % k]['strip-acquisition-duration']
             if t_current+transitionTime+durationTime <= instance['Tmax0_vector'][k_next-1]:
@@ -214,7 +269,7 @@ def evalMulROADEF2003(individual, instance, simple_flag = False, strip_flag = Fa
 
 
 
-def evalROADEF2003(individual, instance, simple_flag = False, strip_flag = False):
+def evalROADEF2003(individual, instance, simple_flag = False, strip_flag = False,track_flag=False):
     def Piecewise(x):
         if x<0.4:
             return(x/4.0)
@@ -222,11 +277,33 @@ def evalROADEF2003(individual, instance, simple_flag = False, strip_flag = False
             return(x-0.3)
         else:
             return(2*x-1)
-    solution = ind2solution(individual,instance, simple_flag = simple_flag, strip_flag = strip_flag)  
-    gain=0     
-    if strip_flag:
+    gain=0
+#    if track_flag:
+#        solution = ind2solution_track(individual,instance)
+#
+#    else:
+    solution = ind2solution(individual,instance, simple_flag = simple_flag, 
+                            strip_flag = strip_flag, track_flag = track_flag)  
+    if track_flag:
+        for subSolution in solution:
+            for strip in subSolution:
+                gain += instance['stripgain_vector'][strip-1]
+    elif strip_flag:
         for strip in solution:
             gain += instance['stripgain_vector'][strip-1]
+# below is the picewise gain calculation
+#        fr={}
+#        for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
+#            fr[requestIndex] = 0
+#            
+#        for k in solution:
+#            ri = instance['strip_%d' % k]['associated-request-index']
+#            fr['request_%d' % ri] = fr['request_%d' % ri] + instance['strip_%d' % k]['strip-useful-surface']/ \
+#                (instance['request_%d' % ri]['request-surface']*(instance['request_%d' % ri]['request-stereo']+1))          
+#        for requestIndex in fnmatch.filter(instance.keys(),'request_*'):
+#            gain = gain + instance[requestIndex]['request-gain']*instance[requestIndex]['request-surface']* \
+#                (instance[requestIndex]['request-stereo']+1)*Piecewise(fr[requestIndex]) 
+                
     elif simple_flag:
         for shot in solution:
             gain += instance['shotgain_vector'][shot-1]            
@@ -475,7 +552,7 @@ def selRoulette(individuals, k, fit_attr="fitness"):
 
 
 def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mutPb=0.05, NGen=100, \
-                 simple_flag = False, Mul_Flag = False, strip_flag =False,exportCSV=False):
+                 simple_flag = False, Mul_Flag = False, strip_flag =False,track_flag = False, exportCSV=False):
     '''
     :param iniMethod: one from ['RS', 'RNDS', 'HRHS', 'FS']
     :param simple_flag:  True for no stereo constraint and pair constraint
@@ -486,7 +563,7 @@ def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mu
         optimization: NSGA-II", 2002.
     '''
     
-    if strip_flag:
+    if strip_flag or track_flag:
         jsonDataDir = os.path.join(BASE_DIR,'data', 'json_customize')
         jsonFile = os.path.join(jsonDataDir, '%s.json' % instName)
         with open(jsonFile) as f:
@@ -506,7 +583,8 @@ def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mu
     toolbox.register('indexes', random.sample, range(1, indSize + 1), indSize)
     # Evaluate define
     toolbox.register('evaluate', evalMulROADEF2003 if Mul_Flag else evalROADEF2003, \
-                     simple_flag = simple_flag, strip_flag = strip_flag, instance=instance)
+                     simple_flag = simple_flag, strip_flag = strip_flag, \
+                     track_flag = track_flag, instance=instance)
     # Structure initializers
     toolbox.register('individual', tools.initIterate, creator.Individual, toolbox.indexes)
     toolbox.register('heuristic',Heuristic,instance, simple_flag = simple_flag, strip_flag = strip_flag)
@@ -550,7 +628,7 @@ def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mu
     
     # check the validity of pop initialization
     if not checkPopValidity(pop):print('not a valid pop initialization!!!')
-    
+    csvData = []    
     print('Start of evolution')
     # Evaluate the entire population
     fitnesses = list(map(toolbox.evaluate, pop))
@@ -619,13 +697,24 @@ def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mu
         print('  Max %s' % max(fits))
         print('  Avg %s' % mean)
         print('  Std %s' % std)
-
+        # Write data to holders for exporting results to CSV file
+        if exportCSV:
+            csvRow = {
+                'generation': g,
+                'evaluated_individuals': len(invalidInd),
+                'min_fitness': min(fits),
+                'max_fitness': max(fits),
+                'avg_fitness': mean,
+                'std_fitness': std,
+            }
+            csvData.append(csvRow)
 
     print('-- End of (successful) evolution --')
     bestInd = tools.selBest(pop, 1)[0]
     print('Best individual: %s' % bestInd)
     print('Fitness: ' , bestInd.fitness.values) 
-    print(ind2solution(bestInd, instance, simple_flag = simple_flag, strip_flag = strip_flag))
+    print(ind2solution(bestInd, instance, simple_flag = simple_flag, 
+                       strip_flag = strip_flag, track_flag=track_flag))
     print('Total cost: %s' % (1 / bestInd.fitness.values[0]))
     print('End of evolution')
 
@@ -635,4 +724,15 @@ def gaROADEF2003(instName,iniMethod = 'RS',indSize=0,popSize = 100, cxPb=0.5, mu
         testSolution = readsolution2solution(solutionFile,instance)
         verifySolution(testSolution,instance)  
         print(toolbox.evaluate(testSolution))
-
+    if exportCSV:
+        csvFilename = '%s_iS%s_pS%s_cP%s_mP%s_nG%s.csv' % (instName, indSize, popSize, cxPb, mutPb, NGen)
+        csvPathname = os.path.join(BASE_DIR, 'results', csvFilename)
+        print('Write to file: %s' % csvPathname)
+        makeDirsForFile(pathname=csvPathname)
+        if not exist(pathname=csvPathname, overwrite=True):
+            with open(csvPathname, 'w') as f:
+                fieldnames = ['generation', 'evaluated_individuals', 'min_fitness', 'max_fitness', 'avg_fitness', 'std_fitness']
+                writer = DictWriter(f, fieldnames=fieldnames, dialect='excel')
+                writer.writeheader()
+                for csvRow in csvData:
+                    writer.writerow(csvRow)
