@@ -12,6 +12,7 @@ import os
 import fnmatch
 from json import dump
 from . import BASE_DIR
+import copy
 
 def makeDirsForFile(pathname):
     try:
@@ -57,6 +58,17 @@ def readsolution(textFile):
     print('get solution:',solution)                           
     return(solution)
 
+def Tmin_0(strip):
+    return(max(strip['coordinates_0' ]['te'],strip['coordinates_1' ]['te']-strip['strip-acquisition-duration']))    
+def Tmax_0(strip):
+    return(min(strip['coordinates_0' ]['tl'],strip['coordinates_1' ]['tl']-strip['strip-acquisition-duration']))  
+def distance10(strip1, strip2):
+    return (((strip1['coordinates_1' ]['x'] - strip2['coordinates_0' ]['x'] )**2 + (strip1['coordinates_1' ]['y'] - strip2['coordinates_0' ]['y'] )**2 )**0.5)
+def strip2request(strip):
+    return('request_%d' % int(strip['associated-request-index']))  
+def stripgain(strip,request):
+    return(strip['strip-useful-surface']*request['request-gain'])
+    
 def text2json(customize= 0):
     '''
      customize : 0 ROADEF2003 data (consider both 01 and 10 direction)
@@ -72,8 +84,6 @@ def text2json(customize= 0):
         return (((strip1['coordinates_%s' % i1]['x'] - strip2['coordinates_%s' % i2]['x'] )**2 + (strip1['coordinates_%s' % i1]['y'] - strip2['coordinates_%s' % i2]['y'] )**2 )**0.5)
     def shot2strip(k):
         return('strip_%d' % int((k+1)/2))
-    def strip2request(strip):
-        return('request_%d' % int(strip['associated-request-index']))  
 
     def Tmin(k,strip):
         #Tmin(k,jsonData[shot2strip(k) )
@@ -87,17 +97,10 @@ def text2json(customize= 0):
         i1=(k+1)%2 
         i2=k%2
         return(min(strip['coordinates_%s' % i1]['tl'],strip['coordinates_%s' % i2]['tl']-strip['strip-acquisition-duration']))   
-    def Tmin_0(strip):
-        return(max(strip['coordinates_0' ]['te'],strip['coordinates_1' ]['te']-strip['strip-acquisition-duration']))    
-    def Tmax_0(strip):
-        return(min(strip['coordinates_0' ]['tl'],strip['coordinates_1' ]['tl']-strip['strip-acquisition-duration']))  
-    def distance10(strip1, strip2):
-        return (((strip1['coordinates_1' ]['x'] - strip2['coordinates_0' ]['x'] )**2 + (strip1['coordinates_1' ]['y'] - strip2['coordinates_0' ]['y'] )**2 )**0.5)
   
     def shotgain(k,strip,request):
         return(strip['strip-useful-surface']*request['request-gain'])
-    def stripgain(strip,request):
-        return(strip['strip-useful-surface']*request['request-gain'])
+
     if customize == 1: 
         textDataDir = os.path.join(BASE_DIR, 'data', 'text_customize')
         jsonDataDir = os.path.join(BASE_DIR, 'data', 'json_customize')
@@ -226,3 +229,130 @@ def text2json(customize= 0):
         makeDirsForFile(pathname=jsonPathname)
         with open(jsonPathname, 'w') as f:
             dump(jsonData, f, sort_keys=True, indent=4, separators=(',', ': '))
+            
+def text2json_track(instName, track = 1):
+
+    textDataDir = os.path.join(BASE_DIR, 'data', 'text_customize')
+    jsonDataDir = os.path.join(BASE_DIR, 'data', 'json_track_%s' % track)
+    textFile = os.path.join(textDataDir,instName)
+#    for textFile in map(lambda textFilename: os.path.join(textDataDir, textFilename), os.listdir(textDataDir)):
+    jsonData = {}
+    j = 0
+    strip_thres = 47
+    print("read text file: " + textFile)
+    with open(textFile) as f:
+        for lineNum, line in enumerate(f, start=1):
+            if lineNum in [3]:
+                pass
+            elif lineNum == 1:
+                # instance-information ::= data-set-number grid-number track-number
+                values = line.strip().split()
+                jsonData['data-set-number'] = int(values[0])
+                jsonData['grid-number'] = int(values[1])
+                jsonData['track-number'] = int(values[2])
+            elif lineNum == 2:
+                # request-strip-numbers ::= request-number strip-number
+                values = line.strip().split()
+                jsonData['request-number'] = int(values[0])
+                jsonData['strip-number'] = int(values[1])
+                jsonData['instance_name'] = ('instance_2_%s_%s' % (values[0],values[1])) 
+ 
+            elif lineNum <= jsonData['request-number']+3:
+                # request ::= request-index request-gain request-surface request-type request-stereo
+                values = line.strip().split()
+                jsonData['request_%s' % values[0]] = {                        
+                    'request-gain': int(values[1]),
+                    'request-surface': float(values[2]),
+                    'request-type': int(values[3]),
+                    'request-stereo': int(values[4]),
+                }
+            elif int((lineNum-jsonData['request-number']-3)%5)==1:
+                 # index-information ::= strip-index associated-request-index to-be-ignored twin-strip-index 
+                values = line.strip().split()  
+                j= j+1
+                if (j>strip_thres):
+                    strip = j-strip_thres + track * strip_thres                                     
+                else:
+                    strip = j
+                jsonData['strip_%s' % strip] = {
+                    'strip-index': int(values[0]),
+                    'associated-request-index': int(values[1]),
+                    'twin-strip-index': int(values[3]),                        
+                }
+                stripIndex = int(values[0])
+                direct = [0, 1]
+               
+            elif int((lineNum-jsonData['request-number']-3)%5)==3:
+                # strip-information ::= strip-useful-surface strip-acquisition-duration
+                values = line.strip().split()  
+                jsonData['strip_%s' % strip] ['strip-useful-surface'] = float(values[0])
+                jsonData['strip_%s' % strip] ['strip-acquisition-duration'] = float(values[1])
+            elif int((lineNum-jsonData['request-number']-3)%5)==4:
+                # end0-information ::= end0-x-coordinate end0-y-coordinate end0-earliest-visibility end0-latest-visibility
+                values = line.strip().split()  
+                jsonData['strip_%s' % strip] ['coordinates_%s' % direct[0]] = {
+                        'x': int(values[0]),
+                        'y': int(values[1]),
+                        'te': float(values[2]),
+                        'tl': float(values[3]),
+                    }
+            elif int((lineNum-jsonData['request-number']-3)%5)==0:
+                # end1-information ::= end1-x-coordinate end1-y-coordinate end1-earliest-visibility end1-latest-visibility
+                values = line.strip().split()  
+                jsonData['strip_%s' % strip] ['coordinates_%s' % direct[1]] = {
+                        'x': int(values[0]),
+                        'y': int(values[1]),
+                        'te': float(values[2]),
+                        'tl': float(values[3]),
+                    }
+                stripIDs =[]
+                if (j>strip_thres):
+                    print(' %s is bigger than strip_tres' % j)
+                    for t in range(1,track):
+                        stripIDs.append( strip + t*(jsonData['strip-number']-strip_thres))                                       
+                else:
+                    for t in range(1,track):
+                        stripIDs.append( strip + t*strip_thres)
+                for t ,stripID in enumerate(stripIDs):
+                    jsonData['strip_%s' % stripID] = copy.deepcopy(jsonData['strip_%s' % strip])
+                    jsonData['strip_%s' % stripID]['strip-index'] = jsonData['strip_%s' % strip]['strip-index'] +100*(t+1)
+                    te0 = float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[0]]['te']) 
+                    tl0= float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[0]]['tl']) 
+                    te1 = float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[1]]['te']) 
+                    tl1 = float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[1]]['tl'])   
+                    jsonData['strip_%s' % stripID]['coordinates_%s' % direct[0]]['te'] = te0 +3600*(t+1)
+                    jsonData['strip_%s' % stripID]['coordinates_%s' % direct[0]]['tl'] = tl0 +3600*(t+1)
+                    jsonData['strip_%s' % stripID]['coordinates_%s' % direct[1]]['te'] = te1 +3600*(t+1)
+                    jsonData['strip_%s' % stripID]['coordinates_%s' % direct[1]]['tl'] = tl1 +3600*(t+1)  
+            else:
+                # selection-information ::= to-be-ignored to-be-ignored
+
+                pass
+    if( j!= jsonData['strip-number']):print("strip-number not match")
+#    for strip in range(1, jsonData['strip-number']+1):
+#        for t in range(1,track):
+#            stripID = strip + t*jsonData['strip-number']
+#            jsonData['strip_%s' % stripID] = copy.deepcopy(jsonData['strip_%s' % strip])
+#            jsonData['strip_%s' % stripID]['strip-index'] = jsonData['strip_%s' % strip]['strip-index'] +100*t
+#            te0 = float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[0]]['te']) 
+#            tl0= float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[0]]['tl']) 
+#            te1 = float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[1]]['te']) 
+#            tl1 = float(jsonData['strip_%s' % strip]['coordinates_%s' % direct[1]]['tl'])   
+#            jsonData['strip_%s' % stripID]['coordinates_%s' % direct[0]]['te'] = te0 +3600*t
+#            jsonData['strip_%s' % stripID]['coordinates_%s' % direct[0]]['tl'] = tl0 +3600*t
+#            jsonData['strip_%s' % stripID]['coordinates_%s' % direct[1]]['te'] = te1 +3600*t
+#            jsonData['strip_%s' % stripID]['coordinates_%s' % direct[1]]['tl'] = tl1 +3600*t                    
+    jsonData['strip-number'] = track * j
+    strips = [x for x in range(1,jsonData['strip-number']+1)]
+    jsonData['distance10_matrix']=[[ distance10(jsonData['strip_%s' % k1], jsonData['strip_%s' % k2]) for k1 in strips] for k2 in strips]
+    jsonData['Tmin0_vector']=[Tmin_0(jsonData['strip_%s' % k]) for k in strips]
+    jsonData['Tmax0_vector']=[Tmax_0(jsonData['strip_%s' % k]) for k in strips]
+    jsonData['stripgain_vector']=[stripgain(jsonData['strip_%s' % k],jsonData[strip2request(jsonData['strip_%s' %k])]) for k in strips]
+    jsonData['stripgain_vector'].append(0.0)
+    jsonFilename = 'instance_%s.json' % jsonData['strip-number']
+
+    jsonPathname = os.path.join(jsonDataDir, jsonFilename)
+    print('Write to file: %s' % jsonPathname)
+    makeDirsForFile(pathname=jsonPathname)
+    with open(jsonPathname, 'w') as f:
+        dump(jsonData, f, sort_keys=True, indent=4, separators=(',', ': '))
